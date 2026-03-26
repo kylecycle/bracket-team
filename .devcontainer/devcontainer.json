@@ -10,8 +10,8 @@
   "remoteEnv": {
     "UV_SYSTEM_PYTHON": "1"
   },
-  "postCreateCommand": "uv sync",
-  "workspaceFolder": "/workspaces/bracket_team",
+  "postCreateCommand": "uv sync --all-extras",
+  "workspaceFolder": "/workspaces/bracket-team",
   "customizations": {
     "vscode": {
       "extensions": [

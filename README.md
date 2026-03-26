@@ -222,15 +222,25 @@ bracket-team list-runs --bracket-id 1
 
 ## CLI Reference
 
-```bash
-bracket-team import-bracket <file>   --year INT --name TEXT
-bracket-team list-brackets
-bracket-team gather-data             --bracket-id INT [--year INT]
-bracket-team run-bracket             --bracket-id INT [--run-name TEXT]
-bracket-team list-runs               --bracket-id INT
-bracket-team show-run                --run-id INT
-bracket-team show-bracket            --bracket-id INT
-bracket-team serve                   [--host TEXT] [--port INT] [--reload]
+```
+$ bracket-team --help
+Usage: bracket-team [OPTIONS] COMMAND [ARGS]...
+
+  bracket-team: Multi-agent NCAA bracket prediction.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  analyze         Analyze a single matchup using all four analysts + manager.
+  gather-data     Scrape and cache tournament data (stats, injuries, odds).
+  import-bracket  Import bracket matchups from a JSON file.
+  list-brackets   List all imported brackets.
+  list-runs       List all runs for a bracket.
+  run-bracket     Analyze every round of a bracket, propagating winners.
+  serve           Start the FastAPI web server.
+  show-bracket    Print completed bracket results grouped by round and region.
+  show-run        Show predictions and cost summary for a run.
 ```
 
 ---
@@ -295,3 +305,79 @@ docker run -p 8000:8000 \
 ```
 
 > In Docker, start the server with `--host 0.0.0.0` to bind to all interfaces: `bracket-team serve --host 0.0.0.0 --port 8000`
+
+### Docker Compose
+
+```bash
+# Copy and fill in your API key
+cp .env.template .env
+
+# Start the service (builds image on first run)
+docker compose up
+
+# Run in the background
+docker compose up -d
+
+# Tear down (keeps the named volume with your DB)
+docker compose down
+```
+
+The compose file mounts a named volume at `/data` and sets `BT_DATABASE_URL=/data/bracket_team.db` so your database persists across container restarts.
+
+---
+
+## Development (Dev Container)
+
+The repo ships with a VS Code dev container that gives you a fully configured Python 3.12 environment with `uv`, `ruff`, and Claude Code pre-installed.
+
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine + Docker Compose)
+- [VS Code](https://code.visualstudio.com/) with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+
+### Getting started
+
+1. **Open the repo in VS Code.**
+
+2. When prompted *"Reopen in Container"*, click it. Or open the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run **Dev Containers: Reopen in Container**.
+
+3. VS Code builds the image (first time only — ~2 minutes) and drops you into the container at `/workspaces/bracket_team`.
+
+4. The `postCreateCommand` runs `uv sync` automatically, installing all dependencies including dev extras.
+
+5. **Copy and configure your environment:**
+
+   ```bash
+   cp .env.template .env
+   # Edit .env and set BT_ANTHROPIC_API_KEY (and optionally BT_GEMINI_API_KEY, BT_ODDS_API_KEY)
+   ```
+
+6. **Run the dev server:**
+
+   ```bash
+   bracket-team serve --reload
+   ```
+
+   Open `http://localhost:8000` in your browser (VS Code auto-forwards the port).
+
+### What's included in the dev container
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| Python | 3.12 | System interpreter at `/usr/local/bin/python3` |
+| uv | latest | Fast package manager; used instead of pip for installs |
+| ruff | latest | Linter + formatter; format-on-save is enabled |
+| Claude Code | latest | `claude` CLI available globally |
+| Node.js / npm | system | Required by Claude Code |
+
+### Your Claude credentials are mounted read-only
+
+The dev container mounts `~/.claude` and `~/.claude.json` from your host machine so the `claude` CLI inside the container is already authenticated. No extra login step needed.
+
+### Running tests inside the container
+
+```bash
+pytest                    # unit tests (no network, ~30s)
+pytest -m slow            # real LLM calls (requires API key in .env)
+ruff check src/           # lint
+```
