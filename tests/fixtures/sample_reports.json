@@ -1,0 +1,18 @@
+[
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "Duke",
+    "favorite_seed": 2,
+    "underdog_name": "UNC",
+    "underdog_seed": 7
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "Kansas",
+    "favorite_seed": 1,
+    "underdog_name": "Fairleigh Dickinson",
+    "underdog_seed": 16
+  }
+]

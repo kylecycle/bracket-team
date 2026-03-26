@@ -1,0 +1,8 @@
+You submitted analysis on this NCAA tournament matchup. Now challenge another analyst.
+
+Produce:
+1. steelman_against_own_pick: strongest argument AGAINST your own pick
+2. target_analyst: analyst you're challenging (e.g., "odds_analyst")
+3. challenge: specific challenge to their thesis — their weakest assumption and why it fails here
+
+Do not restate your thesis. Engage their specific evidence. Each field ≤ {max_chars} characters.

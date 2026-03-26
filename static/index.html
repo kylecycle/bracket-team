@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bracket Team</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+/* Nav */
+nav { background: #1e293b; padding: 12px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; position: sticky; top: 0; z-index: 10; }
+nav h1 { font-size: 1.1rem; font-weight: 700; color: #f8fafc; cursor: pointer; }
+nav h1 span { color: #3b82f6; }
+#breadcrumb { color: #64748b; font-size: 0.85rem; }
+
+/* Layout */
+#app { padding: 24px; }
+
+/* Buttons */
+.btn { padding: 7px 14px; border-radius: 6px; border: none; cursor: pointer; font-size: 0.825rem; font-weight: 500; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: #3b82f6; color: #fff; }
+.btn-success { background: #16a34a; color: #fff; }
+.btn-ghost { background: #334155; color: #e2e8f0; }
+.btn-sm { padding: 3px 9px; font-size: 0.72rem; }
+
+/* Cards / containers */
+.card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+.bracket-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; cursor: pointer; transition: border-color 0.15s; }
+.bracket-card:hover { border-color: #3b82f6; }
+
+/* Typography */
+h2 { font-size: 1.05rem; font-weight: 600; }
+.meta { font-size: 0.72rem; color: #64748b; }
+.empty { color: #64748b; font-size: 0.875rem; }
+.section-title { font-size: 0.75rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+
+/* Flex helpers */
+.row { display: flex; align-items: center; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mt-3 { margin-top: 12px; }
+.flex-1 { flex: 1; }
+
+/* Status pill */
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 600; }
+.pill-pending  { background: #334155; color: #94a3b8; }
+.pill-running  { background: #1d4ed8; color: #bfdbfe; }
+.pill-completed{ background: #14532d; color: #86efac; }
+.pill-error    { background: #7f1d1d; color: #fca5a5; }
+.pill-paused   { background: #92400e; color: #fde68a; }
+
+/* Run list rows */
+.run-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #0f172a; }
+.run-row:last-child { border-bottom: none; }
+
+/* Spinner */
+.spin { display: inline-block; width: 13px; height: 13px; border: 2px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Bracket Tree ─────────────────────────────────────────── */
+.tree-wrap { overflow-x: auto; padding-bottom: 16px; margin-top: 16px; }
+.tree { display: flex; align-items: flex-start; gap: 0; min-width: max-content; }
+
+/* Region block */
+.region { display: flex; flex-direction: column; }
+.region-label { font-size: 0.62rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; text-align: center; margin-bottom: 6px; }
+.region-rounds { display: flex; }
+
+/* Separator between regions */
+.sep { width: 1px; background: #1e293b; margin: 0 6px; align-self: stretch; }
+
+/* Round column */
+.round-col { display: flex; flex-direction: column; width: 148px; position: relative; }
+.round-label { font-size: 0.6rem; color: #475569; text-align: center; margin-bottom: 4px; }
+.round-matches { display: flex; flex-direction: column; justify-content: space-around; flex: 1; }
+
+/* Matchup card — transparent container; each team is its own slot */
+.matchup { background: transparent; border: none; margin: 3px 10px; font-size: 0.72rem; position: relative; display: flex; flex-direction: column; gap: 2px; }
+.team { display: flex; align-items: center; gap: 5px; padding: 5px 7px; background: #1e293b; border: 1px solid #334155; border-radius: 3px; }
+.seed { color: #475569; font-size: 0.62rem; min-width: 14px; text-align: right; font-weight: 600; }
+.tname { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.conf { position: absolute; top: 2px; right: 4px; font-size: 0.52rem; color: #f59e0b; line-height: 1; }
+
+/* Team states */
+.t-winner  { background: #14532d !important; }
+.t-winner .tname  { color: #86efac; }
+.t-winner .seed   { color: #4ade80; }
+.t-upset   { background: #7c2d12 !important; }
+.t-upset .tname   { color: #fdba74; }
+.t-upset .seed    { color: #fb923c; }
+.t-loser .tname   { color: #94a3b8; }
+.t-loser .seed    { color: #64748b; }
+
+/* Results mode — three states, replaces all prediction styling */
+.t-result-win .tname     { color: #86efac !important; font-weight: 700 !important; }
+.t-result-win .seed      { color: #4ade80 !important; }
+.t-result-loss .tname    { color: #f87171 !important; font-weight: 700 !important; }
+.t-result-loss .seed     { color: #f87171 !important; }
+.tname-struck            { text-decoration: line-through; }
+.t-result-pending .tname { color: #cbd5e1 !important; }
+.t-result-pending .seed  { color: #94a3b8 !important; }
+/* Two-line slot: wrong pick (rule 3) shows ~~predicted~~ + actual winner */
+.tname-stack             { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 1px; }
+.tname-stack .tname      { flex: none; }
+
+/* Connector lines (right side of each matchup toward next round) */
+.matchup::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: #334155;
+}
+/* Vertical bracket connector between pairs */
+.bracket-pair { display: flex; flex-direction: column; flex: 1; position: relative; justify-content: space-around; }
+.bracket-pair::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 25%;
+  height: 50%;
+  width: 1px;
+  background: #334155;
+}
+
+/* Modal */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.modal { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 22px; width: 480px; max-width: 92vw; max-height: 85vh; overflow-y: auto; }
+.modal h2 { margin-bottom: 14px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; }
+.field input, .field textarea {
+  width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 5px;
+  padding: 7px 9px; color: #e2e8f0; font-size: 0.825rem;
+}
+.field textarea { height: 100px; font-family: monospace; font-size: 0.72rem; resize: vertical; }
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed #334155; border-radius: 8px; padding: 24px 16px;
+  text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 10px;
+}
+.drop-zone:hover, .drop-zone.drag-over { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
+.drop-zone.file-loaded { border-color: #16a34a; background: rgba(22,163,74,0.06); }
+.drop-zone-icon { font-size: 1.6rem; margin-bottom: 6px; }
+.drop-zone-text { font-size: 0.8rem; color: #94a3b8; }
+.drop-zone-text strong { color: #e2e8f0; }
+.drop-or { text-align: center; font-size: 0.72rem; color: #475569; margin: 8px 0; }
+
+/* Legend */
+.legend { display: flex; gap: 14px; margin-top: 12px; flex-wrap: wrap; font-size: 0.68rem; color: #94a3b8; }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.swatch { display: inline-block; padding: 1px 6px; border-radius: 3px; }
+
+/* ── Quadrant bracket layout ─────────────────────────────── */
+.bracket-quad { display: flex; align-items: stretch; min-width: max-content; }
+.bracket-left, .bracket-right { display: flex; flex-direction: column; }
+.bracket-center {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;
+  min-width: 180px; padding: 0 6px;
+  border-left: 1px solid #1e293b; border-right: 1px solid #1e293b;
+}
+.center-slot { display: flex; flex-direction: column; align-items: center; }
+.center-slot-label { font-size: 0.6rem; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.horiz-sep { height: 1px; background: #1e293b; margin: 4px 8px; }
+
+/* Mirrored connectors for right-side regions */
+.mirror .matchup::after { display: none; }
+.mirror .matchup::before {
+  content: ''; position: absolute; left: -10px; top: 50%;
+  width: 10px; height: 1px; background: #334155;
+}
+.mirror .bracket-pair::after { display: none; }
+.mirror .bracket-pair::before {
+  content: ''; position: absolute; left: 0; top: 25%;
+  height: 50%; width: 1px; background: #334155;
+}
+
+/* Matchup detail modal */
+.detail-modal { width: 560px; }
+.matchup.clickable { cursor: pointer; }
+.matchup.clickable:hover .team { border-color: #3b82f6; transition: border-color 0.15s; }
+.analyst-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+.analyst-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.analyst-role { font-size: 0.7rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; flex: 1; }
+.pick-badge { font-size: 0.65rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+.pick-fav { background: #1d4ed8; color: #bfdbfe; }
+.pick-dog { background: #7c3aed; color: #ddd6fe; }
+.score-bar-wrap { height: 4px; background: #1e293b; border-radius: 2px; margin-bottom: 6px; }
+.score-bar { height: 4px; border-radius: 2px; }
+.thesis { font-size: 0.75rem; color: #94a3b8; line-height: 1.5; }
+.disc-item { padding: 8px 0; border-bottom: 1px solid #1e293b; font-size: 0.77rem; }
+.disc-item:last-child { border-bottom: none; }
+.disc-label { font-size: 0.65rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 3px; }
+.disc-author { color: #3b82f6; }
+.synthesis-box { background: #0f172a; border-left: 3px solid #3b82f6; padding: 10px 14px; border-radius: 0 6px 6px 0; font-size: 0.8rem; line-height: 1.6; color: #cbd5e1; }
+
+/* Data page */
+.btn-warning { background: #b45309; color: #fef3c7; }
+.btn-danger  { background: #7f1d1d; color: #fca5a5; }
+.tabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid #334155; }
+.tab  { padding: 6px 14px; font-size: 0.78rem; font-weight: 500; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab.active { color: #e2e8f0; border-bottom-color: #3b82f6; }
+.tab:hover:not(.active) { color: #94a3b8; }
+.data-table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.data-table th { text-align: left; padding: 6px 10px; background: #0f172a; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; border-bottom: 1px solid #334155; position: sticky; top: 0; }
+.data-table td { padding: 5px 10px; border-bottom: 1px solid #1e293b; white-space: nowrap; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: #1e293b; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 14px; }
+.stat-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 12px 14px; }
+.stat-box .num { font-size: 1.6rem; font-weight: 700; color: #3b82f6; }
+.stat-box .lbl { font-size: 0.68rem; color: #64748b; margin-top: 2px; }
+.gather-log { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 10px 12px; font-family: monospace; font-size: 0.7rem; color: #94a3b8; max-height: 160px; overflow-y: auto; margin-top: 10px; }
+
+/* Config screen */
+.config-section { margin-bottom: 24px; }
+.config-section h3 { font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #1e293b; }
+.config-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.config-field { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 10px 12px; }
+.config-field.overridden { border-color: #854d0e; background: #1c1206; }
+.config-field label { display: block; font-size: 0.7rem; color: #64748b; margin-bottom: 4px; }
+.config-field input { width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px;
+  padding: 5px 8px; color: #e2e8f0; font-size: 0.825rem; }
+.config-field input:focus { outline: none; border-color: #3b82f6; }
+.config-field .default-hint { font-size: 0.65rem; color: #475569; margin-top: 3px; }
+.config-field .field-actions { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+.prompt-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 12px 14px; margin-bottom: 12px; }
+.prompt-card.overridden { border-color: #854d0e; }
+.prompt-card h4 { font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;
+  letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.prompt-card textarea { width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 4px;
+  padding: 8px 10px; color: #e2e8f0; font-size: 0.72rem; font-family: monospace; resize: vertical;
+  min-height: 140px; }
+.prompt-card textarea:focus { outline: none; border-color: #3b82f6; }
+.badge-overridden { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 0.62rem;
+  font-weight: 700; background: #78350f; color: #fde68a; }
+.nav-link { font-size: 0.8rem; color: #64748b; cursor: pointer; padding: 4px 8px; border-radius: 5px;
+  text-decoration: none; }
+.nav-link:hover { color: #e2e8f0; background: #1e293b; }
+
+/* Print header — hidden on screen */
+.print-header { display: none; }
+
+@media print {
+  @page { size: letter landscape; margin: 0.25in 0.3in; }
+  body { background: white !important; color: black !important; }
+  nav, .btn, #modal, .legend, .row > .pill, .row > .spin,
+  [onclick^="pauseRun"], [onclick^="resumeRun"] { display: none !important; }
+  .print-header { display: block !important; border-bottom: 1px solid #d1d5db;
+                  padding-bottom: 3px; margin-bottom: 4px; }
+  .print-meta   { font-size: 0.65rem; color: #374151; }
+  .print-prompt { font-size: 0.62rem; color: #4b5563; font-style: italic; margin-top: 2px; }
+
+  /* [seed] School Name format */
+  .seed::before { content: '['; }
+  .seed::after  { content: ']'; }
+  .seed { min-width: unset !important; font-size: 0.78rem !important; }
+
+  /* Compact bracket for single-page fit — fonts are ~1.5× larger than the old
+     values because zoom (≈0.6×) compresses everything; the JS beforeprint handler
+     then scales column widths to fill the page width. */
+  #app        { padding: 2px !important; }
+  .tree-wrap  { overflow: visible !important; padding: 0 !important; margin: 0 !important; }
+  .round-col  { width: 92px !important; }
+  .matchup    { margin: 2px 3px !important; font-size: 0.85rem !important; gap: 1px !important; }
+  .team       { padding: 3px 5px !important; gap: 3px !important; }
+  .conf       { font-size: 0.65rem !important; }
+  .bracket-center { min-width: 100px !important; padding: 0 2px !important; }
+  .region-label   { font-size: 0.78rem !important; margin-bottom: 2px !important; }
+  .round-label    { font-size: 0.75rem !important; margin-bottom: 2px !important; }
+  .center-slot-label { font-size: 0.8rem !important; }
+  h2          { font-size: 0.9rem !important; }
+
+  /* All teams: transparent background, light border */
+  .matchup    { background: transparent !important; color: black !important; }
+  .team       { background: transparent !important; border-color: #d1d5db !important; }
+  /* ── Predict mode (default): all text black ── */
+  .t-winner, .t-upset { background: transparent !important; }
+  .t-winner .tname, .t-upset .tname { color: black !important; font-weight: 600 !important; }
+  .t-winner .seed,  .t-upset .seed  { color: #374151 !important; }
+  .t-loser .tname  { color: black !important; font-weight: 400 !important; }
+  .t-loser .seed   { color: #6b7280 !important; }
+  /* ── Results mode: colors preserved, no backgrounds ── */
+  body.results-mode .t-result-win .tname     { color: #15803d !important; font-weight: 700 !important; }
+  body.results-mode .t-result-win .seed      { color: #15803d !important; }
+  body.results-mode .t-result-loss .tname    { color: #dc2626 !important; font-weight: 700 !important; }
+  body.results-mode .t-result-loss .seed     { color: #dc2626 !important; }
+  body.results-mode .t-result-pending .tname { color: #374151 !important; }
+  body.results-mode .t-result-pending .seed  { color: #6b7280 !important; }
+  .bracket-center  { border-color: #e5e7eb !important; background: transparent !important; }
+  .horiz-sep       { background: #e5e7eb !important; }
+  .region-label    { color: #374151 !important; }
+  .round-label     { color: #6b7280 !important; }
+  .seed            { color: #6b7280 !important; }
+  .conf            { color: #92400e !important; }
+  .matchup::after, .matchup::before { background: #9ca3af !important; }
+  .bracket-pair::after, .bracket-pair::before { background: #9ca3af !important; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <h1 onclick="go('brackets')">Bracket <span>Team</span></h1>
+  <span id="breadcrumb"></span>
+  <span style="flex:1"></span>
+  <a class="nav-link" onclick="go('config')">⚙ Config</a>
+</nav>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="print-header" class="print-header"></div>
+
+<script>
+// ── Router ────────────────────────────────────────────────────────────────────
+let _poll = null;
+let _results    = null;       // Map<"A|B", {winner,round}> for completed games, null = off
+let _eliminated = new Map();  // teamId → round_num they were eliminated in
+let _wonInRound = new Map();  // teamId → Set<round_num> rounds they won
+let _teamNameMap = new Map();      // teamId → team name (built from visibleMatchups)
+let _nameToRegionalId = new Map(); // team name → regional teamId (excludes National region)
+let _lastRunData = null;      // Cached { data, matchups, siblingRuns } for the active run view
+
+function go(hash) { location.hash = hash; }
+function stopPoll() { if (_poll) { clearInterval(_poll); _poll = null; } }
+
+window.addEventListener('hashchange', route);
+window.addEventListener('load', route);
+
+async function route() {
+  stopPoll();
+  const parts = (location.hash.slice(1) || 'brackets').split('/');
+  document.getElementById('breadcrumb').textContent = '';
+  try {
+    if (parts[0] === 'config') await viewConfig();
+    else if (parts[0] === 'bracket' && parts[1]) await viewBracket(+parts[1]);
+    else if (parts[0] === 'run' && parts[1]) await viewRun(+parts[1]);
+    else if (parts[0] === 'data' && parts[1]) await viewData(+parts[1]);
+    else await viewBrackets();
+  } catch(e) {
+    app(`<p style="color:#f87171">Error: ${e.message}</p>`);
+  }
+}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const r = await fetch('/api' + path, {
+    method,
+    headers: body ? {'Content-Type':'application/json'} : {},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!r.ok) { const e = await r.json().catch(()=>({detail:r.statusText})); throw new Error(e.detail); }
+  if (r.status === 204) return null;
+  return r.json();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function app(html) { document.getElementById('app').innerHTML = html; }
+function crumb(t) { document.getElementById('breadcrumb').textContent = t; }
+function pill(s) { return `<span class="pill pill-${s}">${s}</span>`; }
+
+// ── View: Brackets List ───────────────────────────────────────────────────────
+async function viewBrackets() {
+  app('<p class="empty">Loading…</p>');
+  const brackets = await api('GET', '/brackets');
+  app(`
+    <div class="row gap-2 mb-4">
+      <h2 class="flex-1">Brackets</h2>
+      <button class="btn btn-primary" onclick="showImport()">+ Import</button>
+    </div>
+    ${brackets.length ? `<div class="grid">${brackets.map(bracketCard).join('')}</div>`
+      : '<p class="empty">No brackets yet. Import one to get started.</p>'}
+  `);
+}
+
+function bracketCard(b) {
+  return `
+    <div class="bracket-card" onclick="go('bracket/${b.id}')">
+      <div class="row gap-2 mb-3">
+        <span style="font-size:1.4rem">🏀</span>
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:0.9rem">${b.tournament_name}</div>
+          <div class="meta">${b.year}</div>
+        </div>
+        <button class="btn btn-sm" style="background:#7f1d1d;color:#fca5a5;flex-shrink:0"
+          onclick="event.stopPropagation();deleteBracket(${b.id},'${b.tournament_name.replace(/'/g,"\\'")}')">
+          ✕
+        </button>
+      </div>
+      <div class="meta">ID: ${b.id} · ${b.created_at.slice(0,10)}</div>
+    </div>`;
+}
+
+async function deleteBracket(id, name) {
+  if (!confirm(`Delete "${name}" and all its runs?\nThis cannot be undone.`)) return;
+  try {
+    await api('DELETE', `/brackets/${id}`);
+    await viewBrackets();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── View: Bracket Detail ──────────────────────────────────────────────────────
+async function viewBracket(id) {
+  app('<p class="empty">Loading…</p>');
+  const [bracket, runs] = await Promise.all([
+    api('GET', `/brackets/${id}`),
+    api('GET', `/runs?bracket_id=${id}`),
+  ]);
+  crumb(`/ ${bracket.tournament_name}`);
+  app(`
+    <div class="row gap-2 mb-4">
+      <h2 class="flex-1">${bracket.tournament_name} <span class="meta">(${bracket.year})</span></h2>
+      <button class="btn btn-ghost" onclick="go('data/${id}')">⬡ Data</button>
+      <button class="btn btn-success" onclick="newRun(${id})">▶ New Run</button>
+    </div>
+    <div class="card" style="margin-bottom:1rem">
+      <div class="section-title">Your Preferences</div>
+      <p style="margin:0 0 .5rem;color:var(--muted);font-size:.85rem">Optional: tell the manager anything — personal biases, alma mater loyalty, gut feelings, or override instructions.</p>
+      <textarea id="userPrefs" rows="3" style="width:100%;font-family:inherit;font-size:.9rem;padding:.5rem;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);resize:vertical" placeholder='e.g. "I went to USU" or "Favor underdogs in close matchups"'></textarea>
+    </div>
+    <div class="card">
+      <div class="section-title">Runs</div>
+      ${runs.length ? runs.map(runRow).join('') : '<p class="empty">No runs yet.</p>'}
+    </div>
+  `);
+}
+
+function runRow(r) {
+  const canDelete = r.status !== 'running';
+  return `
+    <div class="run-row">
+      <div class="flex-1">
+        <div style="font-weight:500;font-size:0.85rem">${r.name}</div>
+        <div class="meta">${r.created_at.slice(0,19).replace('T',' ')}</div>
+      </div>
+      ${pill(r.status)}
+      <button class="btn btn-primary btn-sm" onclick="go('run/${r.id}')">View →</button>
+      ${r.status === 'running' ? `<button class="btn btn-sm" style="background:#92400e;color:#fde68a"
+        onclick="pauseRun(${r.id}, ${r.bracket_id})">Pause</button>` : ''}
+      ${r.status === 'paused' ? `<button class="btn btn-sm" style="background:#1d4ed8;color:#bfdbfe"
+        onclick="resumeRun(${r.id})">Resume</button>` : ''}
+      ${canDelete ? `<button class="btn btn-sm" style="background:#7f1d1d;color:#fca5a5"
+        onclick="deleteRun(${r.id},'${r.name.replace(/'/g,"\\'")}',${r.bracket_id})">✕</button>` : ''}
+    </div>`;
+}
+
+async function resumeRun(id) {
+  try {
+    await api('POST', `/runs/${id}/analyze`);
+    history.pushState(null, '', `#run/${id}`);
+    await viewRun(id);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function pauseRun(id, bracketId) {
+  try {
+    await api('POST', `/runs/${id}/pause`);
+    bracketId ? await viewBracket(bracketId) : await viewRun(id);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteRun(id, name, bracketId) {
+  if (!confirm(`Delete run "${name}"?\nThis cannot be undone.`)) return;
+  try {
+    await api('DELETE', `/runs/${id}`);
+    await viewBracket(bracketId);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function newRun(bracketId) {
+  try {
+    const prefsEl = document.getElementById('userPrefs');
+    const prefs = prefsEl ? prefsEl.value.trim() : '';
+    const run = await api('POST', '/runs', {
+      bracket_id: bracketId,
+      name: 'Run ' + new Date().toLocaleTimeString(),
+      user_preferences: prefs || null,
+    });
+    await api('POST', `/runs/${run.id}/analyze`);
+    go(`run/${run.id}`);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── View: Run (Bracket Tree) ──────────────────────────────────────────────────
+async function viewRun(runId) {
+  _results    = null;
+  _eliminated = new Map();
+  _lastRunData = null;
+  app('<p class="empty">Loading…</p>');
+  let data = await api('GET', `/runs/${runId}`);
+  let [allMatchups, siblingRuns] = await Promise.all([
+    api('GET', `/brackets/${data.run.bracket_id}/matchups?run_id=${data.run.id}`),
+    api('GET', `/runs?bracket_id=${data.run.bracket_id}`),
+  ]);
+  crumb(`/ Run ${runId}`);
+  _lastRunData = { data, matchups: allMatchups, siblingRuns };
+  drawTree(data, allMatchups, siblingRuns);
+  if (data.run.status === 'running' || data.run.status === 'pending') {
+    _poll = setInterval(async () => {
+      try {
+        data = await api('GET', `/runs/${runId}`);
+        // Re-fetch matchups so newly created rounds appear during polling
+        allMatchups = await api('GET', `/brackets/${data.run.bracket_id}/matchups?run_id=${data.run.id}`);
+        _lastRunData = { data, matchups: allMatchups, siblingRuns };
+        drawTree(data, allMatchups, siblingRuns);
+        if (data.run.status === 'completed' || data.run.status === 'error' || data.run.status === 'paused') stopPoll();
+      } catch(_) {}
+    }, 2000);
+  }
+}
+
+function _gameKey(a, b) { return [a, b].sort().join('|'); }
+function findGameResult(name1, name2, roundNum) {
+  if (!_results) return null;
+  const entry = _results.get(_gameKey(name1, name2));
+  if (!entry || entry.round !== roundNum) return null;
+  return entry.winner;
+}
+// Returns the teamId that beat `teamId` in `roundNum`, or null if not found.
+function whoBeated(teamId, roundNum) {
+  if (!_results) return null;
+  for (const [key, val] of _results) {
+    if (val.round !== roundNum) continue;
+    const parts = key.split('|');
+    if (parts.includes(teamId) && val.winner !== teamId) return val.winner;
+  }
+  return null;
+}
+
+async function toggleResults(bracketId) {
+  if (_results !== null) {
+    _results    = null;
+    _eliminated = new Map();
+    _wonInRound = new Map();
+  } else {
+    try {
+      const r = await api('GET', `/brackets/${bracketId}/results`);
+      _results    = new Map();
+      _eliminated = new Map();
+      _wonInRound = new Map();
+      for (const g of (r.games ?? [])) {
+        _results.set(_gameKey(g.team1, g.team2), { winner: g.winner, round: g.round_num });
+        const loser = g.team1 === g.winner ? g.team2 : g.team1;
+        _eliminated.set(loser, g.round_num);
+        if (!_wonInRound.has(g.winner)) _wonInRound.set(g.winner, new Set());
+        _wonInRound.get(g.winner).add(g.round_num);
+      }
+    } catch(e) {
+      alert('Could not fetch results: ' + e.message);
+      return;
+    }
+  }
+  if (_lastRunData) {
+    const { data, matchups, siblingRuns } = _lastRunData;
+    drawTree(data, matchups, siblingRuns);
+  }
+}
+
+// ── Bracket Tree Renderer ─────────────────────────────────────────────────────
+const ROUND_NAMES = {1:'Round 1',2:'Round 2',3:'Sweet 16',4:'Elite 8',5:'Final Four',6:'Championship'};
+const CONF_STARS  = {high:'★★★', medium:'★★', low:'★'};
+
+function printBracket() { window.print(); }
+
+// Scale #app to fill Letter landscape page before printing.
+// Strategy: zoom on #app fits the binding axis (height for a 64-team bracket);
+// then scale .round-col widths and .bracket-center directly (layout changes, not
+// transforms) to fill the page width. CSS transforms are avoided because they
+// do not reliably show overflow content in Chrome's print renderer.
+window.addEventListener('beforeprint', () => {
+  const app = document.getElementById('app');
+  const quad = app.querySelector('.bracket-quad');
+  // Letter landscape printable area at 96 CSS px/in:
+  //   width:  (11 - 0.6) * 96 = 998px
+  //   height: (8.5 - 0.5) * 96 = 768px, minus ~35px for the print-header
+  const pageW = 998, pageH = 733;
+
+  // Use .bracket-quad.offsetWidth for the true bracket content width.
+  // app.scrollWidth would include the empty right margin (app fills body width).
+  const W = quad ? quad.offsetWidth : app.scrollWidth;
+  const H = app.scrollHeight;
+  if (!W || !H || (W <= pageW && H <= pageH)) return;
+
+  const z = Math.min(pageW / W, pageH / H, 1);
+  const sx = pageW / (W * z);
+
+  // Expand bracket columns FIRST (before zoom so getComputedStyle is unaffected
+  // by parent zoom) to fill the page width.
+  if (sx > 1.005 && quad) {
+    quad.querySelectorAll('.round-col').forEach(col => {
+      const w = parseFloat(getComputedStyle(col).width) || 92;
+      col.style.setProperty('width', (w * sx).toFixed(1) + 'px', 'important');
+    });
+    const center = quad.querySelector('.bracket-center');
+    if (center) {
+      const w = parseFloat(getComputedStyle(center).width) || 100;
+      center.style.setProperty('min-width', (w * sx).toFixed(1) + 'px', 'important');
+      center.style.setProperty('width',     (w * sx).toFixed(1) + 'px', 'important');
+    }
+  }
+
+  // zoom on #app: fit the binding axis into one page
+  if (z < 1) app.style.zoom = (z * 100).toFixed(1) + '%';
+});
+window.addEventListener('afterprint', () => {
+  const app = document.getElementById('app');
+  app.style.zoom = ''; app.style.transform = ''; app.style.transformOrigin = ''; app.style.width = '';
+  const quad = app.querySelector('.bracket-quad');
+  if (!quad) return;
+  quad.querySelectorAll('.round-col').forEach(col => col.style.removeProperty('width'));
+  const center = quad.querySelector('.bracket-center');
+  if (center) { center.style.removeProperty('min-width'); center.style.removeProperty('width'); }
+});
+
+function drawTree(data, matchups, siblingRuns = []) {
+  document.body.classList.toggle('results-mode', _results !== null);
+  const { run, predictions, total_cost_usd } = data;
+
+  // Populate print header
+  const formattedDate = run.created_at.slice(0, 19).replace('T', ' ');
+  const promptLine = run.user_preferences
+    ? `<div class="print-prompt">Preferences: ${run.user_preferences}</div>`
+    : '';
+  document.getElementById('print-header').innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:14px">
+      <strong style="font-size:0.8rem">Bracket Team</strong>
+      <span class="print-meta">Run ${run.id}: ${run.name}</span>
+      <span class="print-meta">Created: ${formattedDate}</span>
+    </div>${promptLine}`;
+
+  const errorBanner = run.status === 'error' ? `
+    <div style="background:#7f1d1d;border:1px solid #991b1b;border-radius:8px;padding:20px;margin-bottom:16px">
+      <div style="font-weight:600;color:#fca5a5;margin-bottom:6px">Pipeline failed</div>
+      <div style="font-size:0.82rem;color:#fca5a5;opacity:0.8">
+        ${run.error_message
+          ? run.error_message
+          : 'The analysis encountered an error. Check server logs for details.'}
+      </div>
+      <div style="margin-top:14px;display:flex;gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="resumeRun(${run.id})">Resume Run</button>
+        <button class="btn btn-ghost btn-sm"
+          onclick="deleteRun(${run.id},'${run.name.replace(/'/g,"\\'")}',${run.bracket_id})">
+          Delete Run
+        </button>
+      </div>
+    </div>` : '';
+
+  const predMap = Object.fromEntries(predictions.map(p => [p.matchup_id, p]));
+  const predictedIds = new Set(predictions.map(p => p.matchup_id));
+  const visibleMatchups = matchups.filter(m => m.round_num === 1 || predictedIds.has(m.id));
+
+  // Build id→name and name→regional-id maps (used in results mode)
+  _teamNameMap = new Map();
+  _nameToRegionalId = new Map();
+  for (const m of visibleMatchups) {
+    _teamNameMap.set(`${m.region}-${m.favorite_seed}`, m.favorite_name);
+    _teamNameMap.set(`${m.region}-${m.underdog_seed}`, m.underdog_name);
+    if (m.region !== 'National') {
+      _nameToRegionalId.set(m.favorite_name, `${m.region}-${m.favorite_seed}`);
+      _nameToRegionalId.set(m.underdog_name, `${m.region}-${m.underdog_seed}`);
+    }
+  }
+
+  const byRegion = {};
+  for (const m of visibleMatchups) {
+    (byRegion[m.region] ??= {})[m.round_num] ??= [];
+    byRegion[m.region][m.round_num].push(m);
+  }
+
+  const maxRound  = visibleMatchups.length ? Math.max(...visibleMatchups.map(m => m.round_num)) : 1;
+  const earlyRegs = Object.keys(byRegion).filter(r => r !== 'National').sort();
+  const national  = byRegion['National'] || {};
+
+  const spinnerHtml = run.status === 'running' ? '<span class="spin"></span>' : '';
+  const costHtml = total_cost_usd > 0 ? `<span class="meta">$${total_cost_usd.toFixed(4)}</span>` : '';
+  const pauseBtn = run.status === 'running'
+    ? `<button class="btn btn-sm" style="background:#92400e;color:#fde68a"
+        onclick="pauseRun(${run.id}, ${run.bracket_id})">Pause</button>`
+    : '';
+  const resumeBtn = run.status === 'paused'
+    ? `<button class="btn btn-sm" style="background:#1d4ed8;color:#bfdbfe"
+        onclick="resumeRun(${run.id})">Resume</button>`
+    : '';
+  const pdfBtn = predictions.length > 0
+    ? `<button class="btn btn-ghost btn-sm" onclick="printBracket()">📄 PDF</button>`
+    : '';
+  const resultsBtn = predictions.length > 0
+    ? `<button class="btn btn-ghost btn-sm" onclick="toggleResults(${run.bracket_id})"
+         ${_results !== null ? 'style="background:#1d4ed8;color:#bfdbfe"' : ''}>
+         ${_results !== null ? '✓ Results On' : 'Results'}</button>`
+    : '';
+
+  let progressBanner = '';
+  if (run.status === 'running' && run.progress_info) {
+    try {
+      const p = JSON.parse(run.progress_info);
+      const phaseLabel = {research: 'Research', discussion: 'Discussion', decision: 'Decision'}[p.phase] || p.phase;
+      progressBanner = `
+        <div style="font-size:0.82rem;color:#94a3b8;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <span style="color:#64748b">Analyzing:</span>
+          <strong style="color:#cbd5e1">${p.teams}</strong>
+          <span style="color:#475569">—</span>
+          <span style="color:#7dd3fc">${phaseLabel}</span>
+        </div>`;
+    } catch(_) {}
+  }
+
+  // Prev/next run navigation
+  const sortedRuns = [...siblingRuns].sort((a, b) => a.id - b.id);
+  const runIdx = sortedRuns.findIndex(r => r.id === run.id);
+  const prevRun = runIdx > 0 ? sortedRuns[runIdx - 1] : null;
+  const nextRun = runIdx < sortedRuns.length - 1 ? sortedRuns[runIdx + 1] : null;
+  const prevBtn = prevRun
+    ? `<button class="btn btn-ghost btn-sm" onclick="go('run/${prevRun.id}')" title="Run ${prevRun.id}: ${prevRun.name.replace(/"/g,'&quot;')}">&lt;</button>`
+    : `<button class="btn btn-ghost btn-sm" disabled style="opacity:0.3">&lt;</button>`;
+  const nextBtn = nextRun
+    ? `<button class="btn btn-ghost btn-sm" onclick="go('run/${nextRun.id}')" title="Run ${nextRun.id}: ${nextRun.name.replace(/"/g,'&quot;')}">&gt;</button>`
+    : `<button class="btn btn-ghost btn-sm" disabled style="opacity:0.3">&gt;</button>`;
+  const runTitle = sortedRuns.length > 1
+    ? `<div class="row gap-1" style="align-items:center">${prevBtn}<h2 style="margin:0">Run ${run.id}</h2>${nextBtn}</div>`
+    : `<h2 style="margin:0">Run ${run.id}</h2>`;
+  const _MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const [_dp, _tp] = run.created_at.slice(0, 19).split(/[T ]/);
+  const [_yr, _mo, _dy] = _dp.split('-').map(Number);
+  const [_hr, _mn, _sc] = _tp.split(':').map(Number);
+  const runSubtitle = `${_dy} ${_MONTHS[_mo-1]} ${_yr} ${_hr%12||12}:${String(_mn).padStart(2,'0')}:${String(_sc).padStart(2,'0')} ${_hr>=12?'pm':'am'}`;
+
+  let html = `
+    <div class="row gap-2 mb-3" style="flex-wrap:wrap;align-items:center">
+      <div class="flex-1">
+        ${runTitle}
+        <div style="font-size:0.82rem;color:#94a3b8;padding-left:4px">${runSubtitle}</div>
+      </div>
+      ${spinnerHtml} ${pill(run.status)} ${costHtml} ${pauseBtn} ${resumeBtn} ${pdfBtn} ${resultsBtn}
+    </div>
+    ${progressBanner}
+    ${errorBanner}`;
+
+  if (earlyRegs.length === 4) {
+    // ── Quadrant layout ──────────────────────────────────────────────────────
+    // Fixed quadrant positions: East TL, West TR, South BL, Midwest BR
+    const tl = 'East', bl = 'South', tr = 'West', br = 'Midwest';
+    const r1H = r => Math.max(((byRegion[r] || {})[1] || []).length * 72, 144);
+
+    html += `<div class="tree-wrap"><div class="bracket-quad">`;
+
+    // Left side
+    html += `<div class="bracket-left">
+      ${regionBlock(tl, byRegion[tl] || {}, predMap, maxRound, run.id, false, r1H(tl), run.status)}
+      <div class="horiz-sep"></div>
+      ${regionBlock(bl, byRegion[bl] || {}, predMap, maxRound, run.id, false, r1H(bl), run.status)}
+    </div>`;
+
+    // Center
+    html += `<div class="bracket-center">${centerSection(national, predMap, run.id, run.status)}</div>`;
+
+    // Right side (mirrored — rounds shown Elite 8 → Round 1, connectors face left)
+    html += `<div class="bracket-right">
+      ${regionBlock(tr, byRegion[tr] || {}, predMap, maxRound, run.id, true, r1H(tr), run.status)}
+      <div class="horiz-sep"></div>
+      ${regionBlock(br, byRegion[br] || {}, predMap, maxRound, run.id, true, r1H(br), run.status)}
+    </div>`;
+
+    html += `</div></div>`;
+  } else {
+    // ── Linear fallback for non-standard brackets ────────────────────────────
+    html += `<div class="tree-wrap"><div class="tree">`;
+    earlyRegs.forEach((region, i) => {
+      if (i > 0) html += '<div class="sep"></div>';
+      html += regionBlock(region, byRegion[region] || {}, predMap, maxRound, run.id, false,
+        Math.max(((byRegion[region] || {})[1] || []).length * 72, 144), run.status);
+    });
+    if (maxRound >= 5 && national) {
+      html += '<div class="sep"></div>';
+      html += regionBlock('National', national, predMap, maxRound, run.id, false, 288, run.status);
+    }
+    html += `</div></div>`;
+  }
+
+  html += _results !== null ? `
+    <div class="legend">
+      <span><span style="color:#86efac;font-weight:700">Team</span> correct pick</span>
+      <span><span style="color:#f87171;text-decoration:line-through;font-weight:700">Team</span> wrong pick · actual winner shown below</span>
+      <span><span style="color:#64748b">Team</span> not yet played</span>
+    </div>` : `
+    <div class="legend">
+      <span><span class="swatch" style="background:#14532d;color:#86efac">Team</span> predicted winner</span>
+      <span><span class="swatch" style="background:#7c2d12;color:#fdba74">Team</span> upset pick</span>
+      <span><span style="color:#334155">Team</span> eliminated</span>
+      <span>★★★ high · ★★ medium · ★ low confidence</span>
+    </div>`;
+
+  app(html);
+}
+
+function regionBlock(name, regionRounds, predMap, maxRound, runId, mirrored, colH, runStatus) {
+  const regionMax = Math.min(maxRound, 4);
+  const rounds = [];
+  for (let r = 1; r <= regionMax; r++) {
+    if (regionRounds[r] || r === 1) rounds.push(r);
+  }
+  // Right-side regions: show rounds Elite 8 → Round 1 (closest to center first)
+  const ordered = mirrored ? [...rounds].reverse() : rounds;
+  const cols = ordered.map(r => roundCol(regionRounds[r] || [], predMap, r, colH, runId, runStatus)).join('');
+  return `
+    <div class="region">
+      <div class="region-label">${name}</div>
+      <div class="region-rounds${mirrored ? ' mirror' : ''}">${cols}</div>
+    </div>`;
+}
+
+function centerSection(national, predMap, runId, runStatus) {
+  const ff    = national[5] || [];
+  const champ = national[6] || [];
+  if (!ff.length && !champ.length) {
+    return `<div class="center-slot"><div class="center-slot-label" style="color:#1e293b">Final Four · TBD</div></div>`;
+  }
+  const ffCards = ff.map(m => `
+    <div class="center-slot">
+      <div class="center-slot-label">Final Four</div>
+      ${matchupCard(m, predMap[m.id], runId, runStatus)}
+    </div>`).join('');
+  const champCard = champ[0] ? `
+    <div class="center-slot">
+      <div class="center-slot-label" style="color:#f59e0b">Championship</div>
+      ${matchupCard(champ[0], predMap[champ[0].id], runId, runStatus)}
+    </div>` : '';
+
+  // Interleave: FF1, Championship, FF2
+  if (ff.length === 2) {
+    return `
+      <div class="center-slot">
+        <div class="center-slot-label">Final Four</div>
+        ${matchupCard(ff[0], predMap[ff[0].id], runId, runStatus)}
+      </div>
+      <div class="center-slot">
+        <div class="center-slot-label" style="color:#f59e0b">Championship</div>
+        ${champ[0] ? matchupCard(champ[0], predMap[champ[0].id], runId, runStatus) : ''}
+      </div>
+      <div class="center-slot">
+        <div class="center-slot-label">Final Four</div>
+        ${matchupCard(ff[1], predMap[ff[1].id], runId, runStatus)}
+      </div>`;
+  }
+  return ffCards + champCard;
+}
+
+function roundCol(matchups, predMap, roundNum, colH, runId, runStatus) {
+  let inner = '';
+  for (let i = 0; i < matchups.length; i += 2) {
+    const pair = matchups.slice(i, i + 2);
+    const cards = pair.map(m => matchupCard(m, predMap[m.id], runId, runStatus)).join('');
+    inner += pair.length === 2
+      ? `<div class="bracket-pair">${cards}</div>`
+      : cards;
+  }
+  return `
+    <div class="round-col" style="height:${colH}px">
+      <div class="round-label">${ROUND_NAMES[roundNum] || `Round ${roundNum}`}</div>
+      <div class="round-matches">${inner}</div>
+    </div>`;
+}
+
+function matchupCard(m, pred, runId, runStatus) {
+  const winner   = pred?.predicted_winner;
+  const isUpset  = pred?.outcome_type === 'upset';
+  const conf     = pred ? (CONF_STARS[pred.confidence] || '') : '';
+  const clickable = pred && runId ? 'clickable' : '';
+  const onclick   = pred && runId ? `onclick="showMatchupDetail(${m.id},${runId},'${runStatus}')"` : '';
+
+  const favId  = `${m.region}-${m.favorite_seed}`;
+  const undId  = `${m.region}-${m.underdog_seed}`;
+  const winnerId = winner === m.favorite_name ? favId
+                 : winner === m.underdog_name ? undId
+                 : null;
+
+  // Generate the full HTML for one team slot, applying result rules.
+  function teamHtml(teamId, teamName, seed) {
+    if (_results !== null) {
+      // Round 1 has no prior-round results to evaluate — show neutral
+      if (m.round_num === 1) {
+        return `<div class="team t-result-pending"><span class="seed">${seed}</span><span class="tname">${teamName}</span></div>`;
+      }
+
+      // National-region slots use "National-X" IDs, but _eliminated/_wonInRound
+      // are keyed by the team's original regional ID — resolve it by name.
+      const lookupId = m.region === 'National'
+        ? (_nameToRegionalId.get(teamName) ?? teamId)
+        : teamId;
+
+      const prevRound = m.round_num - 1;
+      const elimRound = _eliminated.get(lookupId);
+
+      // Rule 4: eliminated before the previous round → red strikethrough only
+      if (elimRound !== undefined && elimRound < prevRound) {
+        return `<div class="team t-result-loss"><span class="seed">${seed}</span><span class="tname tname-struck">${teamName}</span></div>`;
+      }
+
+      // Rule 3: eliminated exactly in the previous round → strikethrough + actual winner
+      if (elimRound === prevRound) {
+        const actualId   = whoBeated(lookupId, prevRound);
+        const actualName = actualId ? (_teamNameMap.get(actualId) ?? actualId) : '?';
+        return `<div class="team t-result-loss"><span class="seed">${seed}</span><div class="tname-stack"><span class="tname tname-struck">${teamName}</span><span class="tname">${actualName}</span></div></div>`;
+      }
+
+      // Rule 2: won in the previous round → green text
+      if (_wonInRound.get(lookupId)?.has(prevRound)) {
+        return `<div class="team t-result-win"><span class="seed">${seed}</span><span class="tname">${teamName}</span></div>`;
+      }
+
+      // Not yet played or no result available
+      return `<div class="team t-result-pending"><span class="seed">${seed}</span><span class="tname">${teamName}</span></div>`;
+    }
+
+    // Prediction mode
+    if (!winnerId) return `<div class="team"><span class="seed">${seed}</span><span class="tname">${teamName}</span></div>`;
+    const cls = teamId === winnerId ? (isUpset ? 't-upset' : 't-winner') : 't-loser';
+    return `<div class="team ${cls}"><span class="seed">${seed}</span><span class="tname">${teamName}</span></div>`;
+  }
+
+  return `
+    <div class="matchup ${clickable}" ${onclick}>
+      ${conf && _results === null ? `<div class="conf">${conf}</div>` : ''}
+      ${teamHtml(favId, m.favorite_name, m.favorite_seed)}
+      ${teamHtml(undId, m.underdog_name, m.underdog_seed)}
+    </div>`;
+}
+
+// ── Matchup Detail Modal ──────────────────────────────────────────────────────
+async function showMatchupDetail(matchupId, runId, runStatus) {
+  document.getElementById('modal').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal detail-modal">
+        <div style="color:#64748b;font-size:0.8rem">Loading…</div>
+      </div>
+    </div>`;
+
+  let data;
+  try {
+    data = await api('GET', `/matchups/${matchupId}?run_id=${runId}`);
+  } catch(e) {
+    document.querySelector('.modal').innerHTML = `<p style="color:#f87171">Error: ${e.message}</p>`;
+    return;
+  }
+
+  const { matchup: m, prediction: pred, reports, discussion } = data;
+  const isUpset = pred?.outcome_type === 'upset';
+  const winner  = pred?.predicted_winner;
+
+  // ── Analyst reports ──
+  const ROLE_LABELS = {
+    sports_analyst: 'Sports', odds_analyst: 'Odds',
+    historical_analyst: 'Historical', injury_analyst: 'Injury',
+  };
+  const reportsHtml = reports.map(r => {
+    const isFav = r.pick === 'favorite';
+    // Score bar: -5..+5 mapped to 0..100%
+    const pct = ((r.score + 5) / 10 * 100).toFixed(0);
+    const barColor = isFav ? '#3b82f6' : '#7c3aed';
+    return `
+      <div class="analyst-card">
+        <div class="analyst-header">
+          <span class="analyst-role">${ROLE_LABELS[r.analyst_role] || r.analyst_role}</span>
+          <span class="pick-badge ${isFav ? 'pick-fav' : 'pick-dog'}">
+            ${isFav ? m.favorite_name : m.underdog_name}
+          </span>
+          <span style="font-size:0.68rem;color:#64748b">score ${r.score > 0 ? '+' : ''}${r.score} · ${r.relevance}</span>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar" style="width:${pct}%;background:${barColor}"></div>
+        </div>
+        <div class="thesis">${r.thesis}</div>
+      </div>`;
+  }).join('');
+
+  // ── Discussion ──
+  const challenges = discussion.filter(d => d.phase === 'challenge');
+  const rebuttals  = discussion.filter(d => d.phase === 'rebuttal');
+  const ROLE_SHORT = { sports_analyst:'Sports', odds_analyst:'Odds', historical_analyst:'Hist.', injury_analyst:'Injury' };
+
+  const discussionHtml = challenges.length === 0 ? '<p class="empty">No discussion recorded.</p>' :
+    challenges.map(ch => {
+      const reb = rebuttals.find(r => r.author_role === ch.target_role);
+      return `
+        <div class="disc-item">
+          <div class="disc-label">Challenge — <span class="disc-author">${ROLE_SHORT[ch.author_role] || ch.author_role}</span> → ${ROLE_SHORT[ch.target_role] || ch.target_role}</div>
+          <div style="color:#cbd5e1;line-height:1.5">${ch.content}</div>
+          ${reb ? `
+            <div class="disc-label" style="margin-top:8px">Rebuttal — <span class="disc-author">${ROLE_SHORT[reb.author_role] || reb.author_role}</span></div>
+            <div style="color:#cbd5e1;line-height:1.5">${reb.content}</div>
+          ` : ''}
+        </div>`;
+    }).join('');
+
+  // ── Prediction summary ──
+  const predHtml = pred ? `
+    <div class="row gap-2 mb-3" style="flex-wrap:wrap">
+      <span style="font-weight:700;font-size:0.9rem;color:${isUpset?'#fdba74':'#86efac'}">${winner}</span>
+      ${isUpset ? '<span class="pill" style="background:#7c2d12;color:#fdba74">UPSET</span>' : ''}
+      <span class="pill pill-completed">${pred.confidence} confidence</span>
+      <span class="meta">score ${pred.weighted_score > 0 ? '+' : ''}${pred.weighted_score.toFixed(2)}</span>
+    </div>
+    <div class="synthesis-box">${pred.synthesis}</div>
+  ` : '<p class="empty">No prediction yet.</p>';
+
+  document.getElementById('modal').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal detail-modal">
+        <div class="row gap-2 mb-4">
+          <div class="flex-1">
+            <div style="font-weight:700;font-size:1rem">#${m.favorite_seed} ${m.favorite_name} vs #${m.underdog_seed} ${m.underdog_name}</div>
+            <div class="meta">${m.region} · Round ${m.round_num}</div>
+          </div>
+          <button class="btn btn-primary btn-sm"
+            data-fav="${m.favorite_name}" data-dog="${m.underdog_name}"
+            onclick="recalculateMatchup(${m.id},${runId},'${runStatus}',this.dataset.fav,this.dataset.dog)"
+            ${runStatus === 'running' ? 'disabled title="Cannot recalculate while run is in progress"' : ''}>↺ Recalculate</button>
+          <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
+        </div>
+
+        ${pred ? `<div class="section-title">Decision</div>${predHtml}` : ''}
+
+        <div class="section-title" style="margin-top:16px">Analyst Reports</div>
+        ${reportsHtml || '<p class="empty">No reports yet.</p>'}
+
+        <div class="section-title" style="margin-top:16px">Discussion</div>
+        ${discussionHtml}
+      </div>
+    </div>`;
+}
+
+async function recalculateMatchup(matchupId, runId, runStatus, favName, dogName) {
+  document.querySelector('.modal').innerHTML = `
+    <div style="padding:20px">
+      <div style="font-weight:600;margin-bottom:12px">↺ Recalculating…</div>
+      <div id="recalc-status" style="font-size:0.82rem;color:#94a3b8">
+        <div><span class="spin"></span> ${favName} vs ${dogName}</div>
+      </div>
+    </div>`;
+  try {
+    const { recalculated } = await api('POST', `/matchups/${matchupId}/recalculate?run_id=${runId}`);
+
+    // Show cascade summary briefly before refreshing
+    if (recalculated.length > 1) {
+      const statusEl = document.getElementById('recalc-status');
+      if (statusEl) {
+        statusEl.innerHTML = recalculated.map(d =>
+          `<div style="margin-bottom:4px">✓ ${d.matchup.favorite_name} vs ${d.matchup.underdog_name}` +
+          (d.prediction ? ` → <strong>${d.prediction.predicted_winner}</strong>` : '') +
+          `</div>`
+        ).join('');
+      }
+      await new Promise(r => setTimeout(r, 1200));
+    }
+
+    // Full page refresh so bracket colors reflect the new predictions
+    closeModal();
+    await viewRun(runId);
+    await showMatchupDetail(matchupId, runId, runStatus);
+  } catch(e) {
+    document.querySelector('.modal').innerHTML = `
+      <div style="padding:16px">
+        <p style="color:#f87171;margin-bottom:12px">Error: ${e.message}</p>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
+      </div>`;
+  }
+}
+
+// ── Import Modal ──────────────────────────────────────────────────────────────
+function showImport() {
+  document.getElementById('modal').innerHTML = `
+    <div class="overlay" onclick="if(event.target===this)closeModal()">
+      <div class="modal">
+        <h2>Import Bracket</h2>
+        <div class="field">
+          <label>Year</label>
+          <input id="i-year" type="number" value="${new Date().getFullYear()}">
+        </div>
+        <div class="field">
+          <label>Tournament Name</label>
+          <input id="i-name" type="text" value="NCAA Tournament">
+        </div>
+
+        <div class="field">
+          <label>Matchups JSON</label>
+          <div class="drop-zone" id="drop-zone"
+            onclick="document.getElementById('i-file').click()"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="handleDrop(event)">
+            <div class="drop-zone-icon">📂</div>
+            <div class="drop-zone-text" id="drop-label">
+              <strong>Click to browse</strong> or drag &amp; drop a JSON file
+            </div>
+          </div>
+          <input id="i-file" type="file" accept=".json,application/json"
+            style="display:none" onchange="handleFileSelect(this)">
+          <div class="drop-or">— or paste JSON below —</div>
+          <textarea id="i-json"
+            placeholder='[{"round_num":1,"region":"East","favorite_name":"Duke","favorite_seed":1,"underdog_name":"UNC","underdog_seed":16}]'
+            oninput="clearFileState()"></textarea>
+        </div>
+
+        <div class="row gap-2" style="justify-content:flex-end">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="doImport()">Import</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function closeModal() { document.getElementById('modal').innerHTML = ''; }
+
+function loadFileText(text, filename) {
+  document.getElementById('i-json').value = text;
+  const zone = document.getElementById('drop-zone');
+  zone.classList.add('file-loaded');
+  zone.classList.remove('drag-over');
+  document.getElementById('drop-label').innerHTML =
+    `<strong style="color:#86efac">✓ ${filename}</strong> — click to change`;
+}
+
+function clearFileState() {
+  const zone = document.getElementById('drop-zone');
+  if (zone) {
+    zone.classList.remove('file-loaded');
+    document.getElementById('drop-label').innerHTML =
+      '<strong>Click to browse</strong> or drag &amp; drop a JSON file';
+  }
+}
+
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => loadFileText(e.target.result, file.name);
+  reader.readAsText(file);
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => loadFileText(e.target.result, file.name);
+  reader.readAsText(file);
+}
+
+// ── View: Data Tables ─────────────────────────────────────────────────────────
+let _dataTab = 'summary';
+let _dataPoll = null;
+
+async function viewData(bracketId) {
+  app('<p class="empty">Loading…</p>');
+  const bracket = await api('GET', `/brackets/${bracketId}`);
+  crumb(`/ ${bracket.tournament_name} / Data`);
+  await _renderData(bracketId);
+}
+
+async function _renderData(bracketId) {
+  const [summary, gatherStatus, oddsQuota] = await Promise.all([
+    api('GET', `/data/summary?bracket_id=${bracketId}`),
+    api('GET', `/data/gather-status?bracket_id=${bracketId}`),
+    api('GET', `/data/odds-quota`).catch(() => ({ remaining: null })),
+  ]);
+
+  const isRunning = gatherStatus.status === 'running';
+  const btnUpdate = isRunning
+    ? `<button class="btn btn-warning" disabled><span class="spin"></span> Gathering…</button>`
+    : `<button class="btn btn-primary" onclick="doGather(${bracketId})">↻ Update</button>`;
+  const btnClear = `<button class="btn btn-danger" onclick="doClear(${bracketId})">✕ Clear</button>`;
+
+  let statusHtml = '';
+  if (gatherStatus.status === 'completed' && gatherStatus.summary) {
+    const s = gatherStatus.summary;
+    statusHtml = `<div style="color:#86efac;font-size:0.78rem;margin-top:6px">
+      ✓ Last gather: ${s.teams_scraped} teams, ${s.players_scraped} players,
+      ${s.barttorvik_scraped} BartTorvik,
+      ${s.odds_scraped} odds
+      ${s.errors && s.errors.length ? `<span style="color:#fca5a5"> · ${s.errors.length} error(s)</span>` : ''}
+    </div>`;
+  } else if (gatherStatus.status === 'error') {
+    statusHtml = `<div style="color:#fca5a5;font-size:0.78rem;margin-top:6px">✗ Gather failed: ${(gatherStatus.errors[0] || 'unknown error')}</div>`;
+  }
+
+  const tabs = ['summary','team_stats','players','odds','seed_history'];
+  const tabLabels = {summary:'Summary',team_stats:'Team Stats',players:'Players',odds:'Odds',seed_history:'Seed History'};
+
+  const tabHtml = tabs.map(t =>
+    `<div class="tab${_dataTab===t?' active':''}" onclick="switchDataTab('${t}',${bracketId})">${tabLabels[t]}</div>`
+  ).join('');
+
+  let contentHtml = '';
+  if (_dataTab === 'summary') {
+    const srcBtn = (src) => isRunning
+      ? `<button class="btn btn-ghost btn-sm" disabled>↻</button>`
+      : `<button class="btn btn-ghost btn-sm" onclick="doGatherSource(${bracketId},'${src}')">↻ Update</button>`;
+    contentHtml = `
+      <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+        <thead><tr style="color:#64748b;text-align:left">
+          <th style="padding:6px 8px;font-weight:500">Source</th>
+          <th style="padding:6px 8px;font-weight:500">Rows</th>
+          <th style="padding:6px 8px"></th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-top:1px solid #334155">
+            <td style="padding:8px">Sports Stats (Sports Reference)</td>
+            <td style="padding:8px;color:#94a3b8">${summary.team_stats} teams, ${summary.team_player_stats} players</td>
+            <td style="padding:8px;text-align:right">${srcBtn('sports')}</td>
+          </tr>
+          <tr style="border-top:1px solid #334155">
+            <td style="padding:8px">BartTorvik Efficiency</td>
+            <td style="padding:8px;color:#94a3b8">${summary.bart_stats} teams</td>
+            <td style="padding:8px;text-align:right">${srcBtn('barttorvik')}</td>
+          </tr>
+          <tr style="border-top:1px solid #334155">
+            <td style="padding:8px">Odds (The Odds API)</td>
+            <td style="padding:8px;color:#94a3b8">${summary.team_odds} matchups
+              <span style="margin-left:10px;padding:2px 8px;border-radius:4px;font-size:0.75rem;font-weight:600;background:#1e293b;color:${oddsQuota.remaining !== null && oddsQuota.remaining < 50 ? '#fca5a5' : '#7dd3fc'}">${oddsQuota.remaining !== null ? oddsQuota.remaining + ' calls left' : '? calls left'}</span>
+            </td>
+            <td style="padding:8px;text-align:right">${srcBtn('odds')}</td>
+          </tr>
+          <tr style="border-top:1px solid #334155">
+            <td style="padding:8px">Seed History (hardcoded)</td>
+            <td style="padding:8px;color:#94a3b8">${summary.seed_matchup_history} matchup types</td>
+            <td style="padding:8px;text-align:right">${srcBtn('seed_history')}</td>
+          </tr>
+        </tbody>
+      </table>`;
+  } else if (_dataTab === 'team_stats') {
+    const rows = await api('GET', `/data/team_stats?bracket_id=${bracketId}`);
+    contentHtml = _teamStatsTable(rows);
+  } else if (_dataTab === 'players') {
+    const rows = await api('GET', `/data/team_player_stats?bracket_id=${bracketId}`);
+    contentHtml = _playersTable(rows, bracketId);
+  } else if (_dataTab === 'odds') {
+    const rows = await api('GET', `/data/team_odds?bracket_id=${bracketId}`);
+    const quotaBadge = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:0.78rem;color:#94a3b8">
+      <span>The Odds API quota:</span>
+      <span style="padding:2px 10px;border-radius:4px;font-weight:600;background:#1e293b;color:${oddsQuota.remaining !== null && oddsQuota.remaining < 50 ? '#fca5a5' : '#7dd3fc'}">${oddsQuota.remaining !== null ? oddsQuota.remaining + ' calls remaining this month' : 'unknown — run an odds gather to check'}</span>
+    </div>`;
+    contentHtml = quotaBadge + _oddsTable(rows);
+  } else if (_dataTab === 'seed_history') {
+    const rows = await api('GET', `/data/seed_history`);
+    contentHtml = _seedHistoryTable(rows);
+  }
+
+  app(`
+    <div class="row gap-2 mb-4">
+      <h2 class="flex-1">Gathered Data</h2>
+      ${btnUpdate}
+      ${btnClear}
+    </div>
+    ${statusHtml}
+    <div class="card mt-3">
+      <div class="tabs">${tabHtml}</div>
+      <div id="data-content">${contentHtml}</div>
+    </div>
+  `);
+
+  if (isRunning) {
+    if (_dataPoll) clearInterval(_dataPoll);
+    _dataPoll = setInterval(async () => {
+      const st = await api('GET', `/data/gather-status?bracket_id=${bracketId}`);
+      if (st.status !== 'running') { clearInterval(_dataPoll); _dataPoll = null; await _renderData(bracketId); }
+    }, 3000);
+  }
+}
+
+function switchDataTab(tab, bracketId) {
+  _dataTab = tab;
+  _renderData(bracketId);
+}
+
+async function doGather(bracketId) {
+  try {
+    await api('POST', `/data/gather?bracket_id=${bracketId}`);
+    await _renderData(bracketId);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function doGatherSource(bracketId, source) {
+  try {
+    await api('POST', `/data/gather?bracket_id=${bracketId}&source=${source}&force=true`);
+    await _renderData(bracketId);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function toggleInjury(playerId, markInjured, bracketId) {
+  let note = null;
+  if (markInjured) {
+    note = prompt('Injury/absence note (e.g. "ACL tear", "suspended"):\n\nLeave blank for generic "Out".');
+    if (note === null) return; // cancelled
+    note = note.trim() || null;
+  }
+  try {
+    await api('PATCH', '/data/player_injury', { player_id: playerId, injured: markInjured, injury_note: note });
+    await _renderData(bracketId);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function doClear(bracketId) {
+  if (!confirm('Clear all scraped data for this bracket?\nThis cannot be undone.')) return;
+  try {
+    await api('DELETE', `/data/clear?bracket_id=${bracketId}`);
+    _dataTab = 'summary';
+    await _renderData(bracketId);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function _teamStatsTable(rows) {
+  if (!rows.length) return '<p class="empty">No team stats yet. Click Update to gather data.</p>';
+  const cols = ['team_name','season_wins','season_losses','conference','srs','sos_rank',
+    'adj_off_eff','adj_def_eff','bart_adj_oe','bart_adj_de','barthag','bart_tempo','bart_wab',
+    'fg_pct','three_pt_pct','ft_rate','tov_pct','neutral_wins','neutral_losses',
+    'last10_wins','last10_losses','head_coach','conf_tourney_wins','conf_tourney_losses'];
+  const labels = {team_name:'Team',season_wins:'W',season_losses:'L',conference:'Conf',
+    srs:'SRS',sos_rank:'SOS',adj_off_eff:'AdjOE',adj_def_eff:'AdjDE',
+    bart_adj_oe:'B.AdjOE',bart_adj_de:'B.AdjDE',barthag:'Barthag',bart_tempo:'Tempo',bart_wab:'WAB',
+    fg_pct:'FG%',three_pt_pct:'3P%',ft_rate:'FTr',tov_pct:'TOV%',
+    neutral_wins:'N-W',neutral_losses:'N-L',last10_wins:'L10W',last10_losses:'L10L',
+    head_coach:'Coach',conf_tourney_wins:'CTW',conf_tourney_losses:'CTL'};
+  const fmtVal = (col, v) => {
+    if (v === null || v === undefined) return '<span style="color:#334155">—</span>';
+    if (['fg_pct','three_pt_pct'].includes(col)) return (v*100).toFixed(1)+'%';
+    if (['srs','sos_rank','adj_off_eff','adj_def_eff','bart_adj_oe','bart_adj_de','bart_tempo','bart_wab'].includes(col)) return (+v).toFixed(1);
+    if (['barthag','ft_rate'].includes(col)) return (+v).toFixed(3);
+    if (col === 'tov_pct') return (+v).toFixed(1)+'%';
+    return v;
+  };
+  return `<div class="data-table-wrap"><table class="data-table">
+    <thead><tr>${cols.map(c=>`<th>${labels[c]||c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${fmtVal(c,r[c])}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+const _POS_MAP = {G:'Guard',F:'Forward',C:'Center','G-F':'Guard-Fwd','F-G':'Fwd-Guard','F-C':'Fwd-Center','C-F':'Center-Fwd','PG':'Point Guard','SG':'Shooting Guard','SF':'Small Forward','PF':'Power Forward'};
+const _YR_MAP = {Fr:'Freshman',So:'Sophomore',Jr:'Junior',Sr:'Senior',FR:'Freshman',SO:'Sophomore',JR:'Junior',SR:'Senior'};
+
+function _playersTable(rows, bracketId) {
+  if (!rows.length) return '<p class="empty">No player stats yet. Click Update to gather data.</p>';
+  const cols = ['team_name','player_name','position','class_year','ppg','rpg','apg','mpg','injured'];
+  const labels = {team_name:'Team',player_name:'Player',position:'Position',class_year:'Year',ppg:'PPG',rpg:'RPG',apg:'APG',mpg:'MPG',injured:'Status'};
+  const fmtVal = (col, v, row) => {
+    if (col === 'injured') {
+      const note = row.injury_note || '';
+      if (!v) return `<span class="status-toggle" style="color:#86efac;cursor:pointer" title="Click to flag as out" onclick="toggleInjury(${row.id},true,${bracketId})">OK</span>`;
+      return `<span class="status-toggle" style="color:#fca5a5;cursor:pointer;text-decoration:underline dotted" title="${(note||'Out').replace(/"/g,'&quot;')} — click to clear" onclick="toggleInjury(${row.id},false,${bracketId})">OUT${note ? ' *' : ''}</span>`;
+    }
+    if (v === null || v === undefined) return '<span style="color:#334155">—</span>';
+    if (['ppg','rpg','apg','mpg'].includes(col)) return (+v).toFixed(1);
+    if (col === 'position') return _POS_MAP[v] || v;
+    if (col === 'class_year') return _YR_MAP[v] || v;
+    return v;
+  };
+  return `<div class="data-table-wrap"><table class="data-table">
+    <thead><tr>${cols.map(c=>`<th>${labels[c]||c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>{
+      const rowStyle = r.injured ? ' style="opacity:0.65"' : '';
+      return `<tr${rowStyle}>${cols.map(c=>`<td>${fmtVal(c,r[c],r)}</td>`).join('')}</tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function _oddsTable(rows) {
+  if (!rows.length) return '<p class="empty">No odds data yet. Odds are only available close to tournament time.</p>';
+  const cols = ['favorite_name','underdog_name','spread','favorite_ml','underdog_ml','over_under','implied_fav_win_pct','implied_dog_win_pct'];
+  const labels = {favorite_name:'Favorite',underdog_name:'Underdog',spread:'Spread',favorite_ml:'Fav ML',underdog_ml:'Dog ML',over_under:'O/U',implied_fav_win_pct:'Fav%',implied_dog_win_pct:'Dog%'};
+  const fmtVal = (col, v) => {
+    if (v === null || v === undefined) return '<span style="color:#334155">—</span>';
+    if (['implied_fav_win_pct','implied_dog_win_pct'].includes(col)) return (v*100).toFixed(1)+'%';
+    if (col === 'spread') return v > 0 ? '+'+v : v;
+    return v;
+  };
+  return `<div class="data-table-wrap"><table class="data-table">
+    <thead><tr>${cols.map(c=>`<th>${labels[c]||c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td>${fmtVal(c,r[c])}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function _seedHistoryTable(rows) {
+  if (!rows.length) return '<p class="empty">No seed history yet. Click Update to gather data.</p>';
+  const cols = ['favorite_seed','underdog_seed','total_games','favorite_wins','underdog_wins','favorite_win_pct','upset_rate_pct','notable_pattern'];
+  const labels = {favorite_seed:'Fav Seed',underdog_seed:'Dog Seed',total_games:'Games',favorite_wins:'Fav W',underdog_wins:'Dog W',favorite_win_pct:'Fav Win%',upset_rate_pct:'Upset%',notable_pattern:'Pattern'};
+  const fmtVal = (col, v) => {
+    if (v === null || v === undefined) return '<span style="color:#334155">—</span>';
+    if (['favorite_win_pct','upset_rate_pct'].includes(col)) return (+v).toFixed(1)+'%';
+    return v;
+  };
+  return `<div class="data-table-wrap"><table class="data-table">
+    <thead><tr>${cols.map(c=>`<th>${labels[c]||c}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr>${cols.map(c=>`<td style="${c==='notable_pattern'?'max-width:220px;white-space:normal':''}">${fmtVal(c,r[c])}</td>`).join('')}</tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ── View: Config ─────────────────────────────────────────────────────────────
+let _configData = null;
+let _configTab = 'settings';
+let _pendingFields = {};
+
+async function viewConfig() {
+  crumb('/ Config');
+  app('<p class="empty">Loading…</p>');
+  _configData = await api('GET', '/config');
+  _pendingFields = {};
+  _renderConfig();
+}
+
+function _renderConfig() {
+  const { fields, prompts } = _configData;
+  const tabs = `
+    <div class="tabs">
+      <div class="tab ${_configTab==='settings'?'active':''}" onclick="_cfgTab('settings')">Settings</div>
+      <div class="tab ${_configTab==='prompts'?'active':''}" onclick="_cfgTab('prompts')">Prompts</div>
+    </div>`;
+
+  let body = '';
+  if (_configTab === 'settings') {
+    body = _renderSettingsTab(fields);
+  } else {
+    body = _renderPromptsTab(prompts);
+  }
+
+  app(`
+    <div class="row gap-2 mb-4">
+      <h2 class="flex-1">Config</h2>
+    </div>
+    <div class="card">
+      ${tabs}
+      ${body}
+    </div>
+  `);
+}
+
+function _cfgTab(tab) {
+  _configTab = tab;
+  _pendingFields = {};
+  _renderConfig();
+}
+
+function _renderSettingsTab(fields) {
+  // Group fields
+  const groups = {};
+  for (const f of fields) {
+    if (!groups[f.group]) groups[f.group] = [];
+    groups[f.group].push(f);
+  }
+
+  let html = '';
+  for (const [groupName, groupFields] of Object.entries(groups)) {
+    html += `<div class="config-section"><h3>${groupName}</h3><div class="config-fields">`;
+    for (const f of groupFields) {
+      const val = _pendingFields[f.name] !== undefined ? _pendingFields[f.name] : f.value;
+      const isDirty = _pendingFields[f.name] !== undefined;
+      const isOverridden = f.is_overridden || isDirty;
+      const defaultHint = f.default !== null && f.default !== undefined ? `Default: ${f.default}` : '';
+      html += `
+        <div class="config-field ${isOverridden ? 'overridden' : ''}" id="cfg-${f.name}">
+          <label>${f.label}${isOverridden ? ' <span class="badge-overridden">overridden</span>' : ''}</label>
+          <input type="${f.type === 'str' ? 'text' : 'number'}"
+            ${f.type === 'float' ? 'step="any"' : ''}
+            value="${String(val).replace(/"/g, '&quot;')}"
+            oninput="_cfgFieldChange('${f.name}', this.value)"
+            id="cfgInput-${f.name}">
+          <div class="default-hint">${defaultHint}</div>
+          <div class="field-actions">
+            ${isOverridden ? `<button class="btn btn-ghost btn-sm" onclick="_cfgResetField('${f.name}')">↺ Default</button>` : ''}
+          </div>
+        </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  const hasPending = Object.keys(_pendingFields).length > 0;
+  html += `<div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+    ${hasPending ? `<button class="btn btn-ghost" onclick="_cfgCancelEdits()">Cancel</button>` : ''}
+    <button class="btn btn-primary" ${!hasPending ? 'disabled style="opacity:0.5"' : ''} onclick="_cfgSaveSettings()">Save Changes</button>
+  </div>`;
+
+  return html;
+}
+
+function _renderPromptsTab(prompts) {
+  let html = '';
+  for (const p of prompts) {
+    const label = p.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    html += `
+      <div class="prompt-card ${p.is_overridden ? 'overridden' : ''}" id="prompt-card-${p.name}">
+        <h4>${label} ${p.is_overridden ? '<span class="badge-overridden">overridden</span>' : ''}
+          ${p.is_overridden ? `<button class="btn btn-ghost btn-sm" onclick="_cfgResetPrompt('${p.name}')">↺ Default</button>` : ''}
+        </h4>
+        <textarea id="promptTA-${p.name}" rows="8">${_escHtml(p.content)}</textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="_cfgSavePrompt('${p.name}')">Save</button>
+        </div>
+      </div>`;
+  }
+  return html;
+}
+
+function _cfgFieldChange(name, rawVal) {
+  _pendingFields[name] = rawVal;
+  // Update overridden badge inline without full re-render
+  const card = document.getElementById(`cfg-${name}`);
+  if (card) {
+    const isOverridden = true; // any pending change is "overridden"
+    card.classList.add('overridden');
+  }
+  // Enable Save button
+  const saveBtn = document.querySelector('.btn-primary[onclick="_cfgSaveSettings()"]');
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
+}
+
+function _cfgCancelEdits() {
+  _pendingFields = {};
+  _renderConfig();
+}
+
+async function _cfgSaveSettings() {
+  if (!Object.keys(_pendingFields).length) return;
+
+  // Coerce values to correct types
+  const specMap = {};
+  for (const f of _configData.fields) specMap[f.name] = f.type;
+
+  const coerced = {};
+  for (const [k, v] of Object.entries(_pendingFields)) {
+    const t = specMap[k];
+    if (t === 'int') coerced[k] = parseInt(v, 10);
+    else if (t === 'float') coerced[k] = parseFloat(v);
+    else coerced[k] = v;
+  }
+
+  try {
+    _configData = await api('PATCH', '/config', { fields: coerced });
+    _pendingFields = {};
+    _renderConfig();
+  } catch(e) { alert('Save failed: ' + e.message); }
+}
+
+async function _cfgResetField(name) {
+  try {
+    _configData = await api('DELETE', `/config/fields/${name}`);
+    _pendingFields = {};
+    _renderConfig();
+  } catch(e) { alert('Reset failed: ' + e.message); }
+}
+
+async function _cfgSavePrompt(name) {
+  const ta = document.getElementById(`promptTA-${name}`);
+  if (!ta) return;
+  try {
+    _configData = await api('PATCH', '/config', { prompts: { [name]: ta.value } });
+    _renderConfig();
+  } catch(e) { alert('Save failed: ' + e.message); }
+}
+
+async function _cfgResetPrompt(name) {
+  try {
+    _configData = await api('DELETE', `/config/prompts/${name}`);
+    _renderConfig();
+  } catch(e) { alert('Reset failed: ' + e.message); }
+}
+
+function _escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function doImport() {
+  const year = +document.getElementById('i-year').value;
+  const name = document.getElementById('i-name').value.trim();
+  const raw  = document.getElementById('i-json').value.trim();
+  if (!name) return alert('Enter a tournament name.');
+  if (!raw)  return alert('Provide matchups JSON — upload a file or paste below.');
+  let matchups;
+  try { matchups = JSON.parse(raw); } catch(e) { return alert('Invalid JSON: ' + e.message); }
+  try {
+    const res = await api('POST', '/brackets', { year, tournament_name: name, matchups });
+    closeModal();
+    go(`bracket/${res.bracket.id}`);
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+</script>
+</body>
+</html>

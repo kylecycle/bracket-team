@@ -1,0 +1,258 @@
+[
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "Duke",
+    "favorite_seed": 1,
+    "underdog_name": "Siena",
+    "underdog_seed": 16
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "Ohio State",
+    "favorite_seed": 8,
+    "underdog_name": "TCU",
+    "underdog_seed": 9
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "St Johns NY",
+    "favorite_seed": 5,
+    "underdog_name": "Northern Iowa",
+    "underdog_seed": 12
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "Kansas",
+    "favorite_seed": 4,
+    "underdog_name": "Cal Baptist",
+    "underdog_seed": 13
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "Louisville",
+    "favorite_seed": 6,
+    "underdog_name": "South Florida",
+    "underdog_seed": 11
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "Michigan State",
+    "favorite_seed": 3,
+    "underdog_name": "North Dakota State",
+    "underdog_seed": 14
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "UCLA",
+    "favorite_seed": 7,
+    "underdog_name": "Central Florida",
+    "underdog_seed": 10
+  },
+  {
+    "round_num": 1,
+    "region": "East",
+    "favorite_name": "UConn",
+    "favorite_seed": 2,
+    "underdog_name": "Furman",
+    "underdog_seed": 15
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "Arizona",
+    "favorite_seed": 1,
+    "underdog_name": "LIU",
+    "underdog_seed": 16
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "Villanova",
+    "favorite_seed": 8,
+    "underdog_name": "Utah State",
+    "underdog_seed": 9
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "Wisconsin",
+    "favorite_seed": 5,
+    "underdog_name": "High Point",
+    "underdog_seed": 12
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "Arkansas",
+    "favorite_seed": 4,
+    "underdog_name": "Hawaii",
+    "underdog_seed": 13
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "BYU",
+    "favorite_seed": 6,
+    "underdog_name": "Texas",
+    "underdog_seed": 11
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "Gonzaga",
+    "favorite_seed": 3,
+    "underdog_name": "Kennesaw State",
+    "underdog_seed": 14
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "Miami FL",
+    "favorite_seed": 7,
+    "underdog_name": "Missouri",
+    "underdog_seed": 10
+  },
+  {
+    "round_num": 1,
+    "region": "West",
+    "favorite_name": "Purdue",
+    "favorite_seed": 2,
+    "underdog_name": "Queens",
+    "underdog_seed": 15
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Michigan",
+    "favorite_seed": 1,
+    "underdog_name": "Howard",
+    "underdog_seed": 16
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Georgia",
+    "favorite_seed": 8,
+    "underdog_name": "Saint Louis",
+    "underdog_seed": 9
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Texas Tech",
+    "favorite_seed": 5,
+    "underdog_name": "Akron",
+    "underdog_seed": 12
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Alabama",
+    "favorite_seed": 4,
+    "underdog_name": "Hofstra",
+    "underdog_seed": 13
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Tennessee",
+    "favorite_seed": 6,
+    "underdog_name": "Miami OH",
+    "underdog_seed": 11
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Virginia",
+    "favorite_seed": 3,
+    "underdog_name": "Wright State",
+    "underdog_seed": 14
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Kentucky",
+    "favorite_seed": 7,
+    "underdog_name": "Santa Clara",
+    "underdog_seed": 10
+  },
+  {
+    "round_num": 1,
+    "region": "Midwest",
+    "favorite_name": "Iowa State",
+    "favorite_seed": 2,
+    "underdog_name": "Tennessee State",
+    "underdog_seed": 15
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "Florida",
+    "favorite_seed": 1,
+    "underdog_name": "PV A&M",
+    "underdog_seed": 16
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "Clemson",
+    "favorite_seed": 8,
+    "underdog_name": "Iowa",
+    "underdog_seed": 9
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "Vanderbilt",
+    "favorite_seed": 5,
+    "underdog_name": "McNeese",
+    "underdog_seed": 12
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "Nebraska",
+    "favorite_seed": 4,
+    "underdog_name": "Troy",
+    "underdog_seed": 13
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "North Carolina",
+    "favorite_seed": 6,
+    "underdog_name": "Virginia Commonwealth",
+    "underdog_seed": 11
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "Illinois",
+    "favorite_seed": 3,
+    "underdog_name": "Penn",
+    "underdog_seed": 14
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "Saint Mary's",
+    "favorite_seed": 7,
+    "underdog_name": "Texas A&M",
+    "underdog_seed": 10
+  },
+  {
+    "round_num": 1,
+    "region": "South",
+    "favorite_name": "Houston",
+    "favorite_seed": 2,
+    "underdog_name": "Idaho",
+    "underdog_seed": 15
+  }
+]

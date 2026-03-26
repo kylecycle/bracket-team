@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - bracket_data:/data
+    environment:
+      - BT_DATABASE_URL=/data/bracket_team.db
+      - BT_ANTHROPIC_API_KEY=${BT_ANTHROPIC_API_KEY:-dummy-key}
+      # Optional: uncomment to require an API key on all requests
+      # - BT_API_KEY=${BT_API_KEY}
+    restart: unless-stopped
+
+volumes:
+  bracket_data:
